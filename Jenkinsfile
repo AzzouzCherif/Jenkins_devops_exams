@@ -1,4 +1,3 @@
-####fin
 pipeline {
     agent any
 
