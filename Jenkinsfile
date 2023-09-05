@@ -17,8 +17,8 @@ pipeline {
                 }
             }
         }
-    }
-     stage('Deploy to Dev') {
+
+        stage('Deploy to Dev') {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
                     sh '''
@@ -30,6 +30,36 @@ pipeline {
             }
         }
 
+        // ... [Ajoutez vos autres étapes de déploiement ici]
 
+        stage('Wait for Production Approval') {
+            when {
+                allOf {
+                    expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+                    branch 'master'
+                }
+            }
+            steps {
+                input message: 'Deploy to Production?', ok: 'Deploy'
+            }
+        }
 
+        stage('Deploy to Production') {
+            when {
+                allOf {
+                    expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+                    branch 'master'
+                }
+            }
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_PATH
+                    helm upgrade --install cast ./cast-service/cast-service --namespace prod
+                    helm upgrade --install movie ./movie-service/movie-service --namespace prod
+                    '''
+                }
+            }
+        }
+    }
 }
