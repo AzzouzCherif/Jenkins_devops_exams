@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cast-service-deployment
+spec:
+  replicas: {{ .Values.castDeployment.replicas }}
+  selector:
+    matchLabels:
+      app: cast-service
+  template:
+    metadata:
+      labels:
+        app: cast-service
+    spec:
+      containers:
+      - name: cast-service
+        image: {{ .Values.castDeployment.image }}
+        ports:
+        - containerPort: {{ .Values.castPortservice.port }}
+        env:
+        - name: DATABASE_URI
+          value: postgresql://cast_db_username:cast_db_password@cast-db/cast_db_dev
+        command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
