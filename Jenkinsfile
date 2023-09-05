@@ -1,20 +1,20 @@
 pipeline {
     environment {
-        DOCKER_ID = "azzouz953" // Utilisez votre propre Docker ID.
-        DOCKER_TAG = "latest" // J'utilise "latest" puisque c'est le tag que vous avez montré précédemment.
+        DOCKER_ID = "azzouz953"
+        DOCKER_TAG = "latest" // Utilisation de 'latest' pour simplifier, bien que vous pourriez vouloir utiliser BUILD_ID ou d'autres tags si nécessaire
     }
-
     agent any
 
     stages {
-        stage('Pull Docker Images') {
+        stage('Docker Pull for cast-service') {
             steps {
-                script {
-                    sh '''
-                    docker pull $DOCKER_ID/cast-service:$DOCKER_TAG
-                    docker pull $DOCKER_ID/movie-service:$DOCKER_TAG
-                    '''
-                }
+                sh 'docker pull $DOCKER_ID/cast-service:$DOCKER_TAG'
+            }
+        }
+        
+        stage('Docker Pull for movie-service') {
+            steps {
+                sh 'docker pull $DOCKER_ID/movie-service:$DOCKER_TAG'
             }
         }
 
@@ -30,7 +30,29 @@ pipeline {
             }
         }
 
-        // ... [Ajoutez vos autres étapes de déploiement ici]
+        stage('Deploy to QA') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_PATH
+                    helm upgrade --install cast ./cast-service/cast-service --namespace qa
+                    helm upgrade --install movie ./movie-service/movie-service --namespace qa
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Staging') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_PATH
+                    helm upgrade --install cast ./cast-service/cast-service --namespace staging
+                    helm upgrade --install movie ./movie-service/movie-service --namespace staging
+                    '''
+                }
+            }
+        }
 
         stage('Wait for Production Approval') {
             when {
