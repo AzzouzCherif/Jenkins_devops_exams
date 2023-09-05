@@ -18,4 +18,18 @@ pipeline {
             }
         }
     }
+     stage('Deploy to Dev') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_PATH
+                    helm upgrade --install cast ./cast-service/cast-service --namespace dev
+                    helm upgrade --install movie ./movie-service/movie-service --namespace dev
+                    '''
+                }
+            }
+        }
+
+
+
 }
